@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Live World News - Real-Time Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .live-badge {
+            background: #e74c3c;
+            color: white;
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            animation: pulse-gentle 2s infinite;
+            font-weight: normal;
+        }
+
+        @keyframes pulse-gentle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .live-badge {
+                animation: none;
+            }
+        }
+
+        .update-info {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 8px;
+        }
+
+        /* Category Tabs */
+        .categories {
+            background: white;
+            padding: 12px 1.5rem;
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 100px;
+            background: white;
+            z-index: 99;
+            scroll-behavior: smooth;
+        }
+
+        .categories::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .categories::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .categories::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .cat-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #555;
+            white-space: nowrap;
+            min-height: 44px;
+        }
+
+        .cat-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .cat-btn:focus {
+            outline: 2px solid #1a1a2e;
+            outline-offset: 2px;
+        }
+
+        .cat-btn.active {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* News Grid */
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        /* News Card */
+        .news-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .news-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .news-card:focus {
+            outline: 2px solid #1a1a2e;
+            outline-offset: 2px;
+        }
+
+        .card-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .card-img.loading {
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        .card-content {
+            padding: 1.2rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .source {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #e74c3c;
+            letter-spacing: 0.5px;
+        }
+
+        .save-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            min-height: 44px;
+            min-width: 44px;
+            transition: transform 0.2s;
+        }
+
+        .save-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .save-btn.saved {
+            color: #e74c3c;
+        }
+
+        .title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 10px;
+            color: #1a1a2e;
+        }
+
+        .description {
+            font-size: 0.85rem;
+            color: #555;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            flex: 1;
+        }
+
+        .pub-date {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 8px;
+        }
+
+        /* Loading & Error */
+        .loading, .error, .no-news {
+            text-align: center;
+            padding: 4rem;
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .error {
+            color: #e74c3c;
+            background: #ffe5e5;
+            border-radius: 12px;
+            padding: 2rem;
+        }
+
+        .error-details {
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            color: #c0392b;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .refresh-btn, .retry-btn {
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-block;
+            transition: background 0.2s;
+            min-height: 44px;
+            font-weight: 600;
+        }
+
+        .refresh-btn:hover, .retry-btn:hover {
+            background: #2c2c54;
+        }
+
+        .refresh-btn:focus, .retry-btn:focus {
+            outline: 2px solid #1a1a2e;
+            outline-offset: 2px;
+        }
+
+        .refresh-btn.loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .view-saved-btn {
+            background: #3498db;
+            margin-left: auto;
+        }
+
+        .view-saved-btn:hover {
+            background: #2980b9;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-info {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+
+        .modal.open {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 90%;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+            color: #1a1a2e;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: #1a1a2e;
+        }
+
+        .saved-articles-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .saved-empty {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+            grid-column: 1 / -1;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+            font-size: 0.75rem;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.3rem; }
+            .categories { 
+                top: 85px;
+                padding: 10px 1rem;
+            }
+            .news-grid { grid-template-columns: 1fr; }
+            .container { padding: 1rem; }
+            .cat-btn { padding: 8px 16px; }
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .view-saved-btn {
+                margin-left: 0;
+            }
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>
+        🌍 Live World News 
+        <span class="live-badge" aria-label="Live updates">● LIVE</span>
+    </h1>
+    <div class="update-info" id="updateInfo">Loading latest headlines...</div>
+</div>
+
+<div class="categories" id="categories" role="tablist" aria-label="News categories">
+    <button class="cat-btn active" data-category="general" role="tab" aria-selected="true">🔥 Top Stories</button>
+    <button class="cat-btn" data-category="world" role="tab" aria-selected="false">🌎 World</button>
+    <button class="cat-btn" data-category="technology" role="tab" aria-selected="false">💻 Technology</button>
+    <button class="cat-btn" data-category="business" role="tab" aria-selected="false">📈 Business</button>
+    <button class="cat-btn" data-category="health" role="tab" aria-selected="false">🏥 Health</button>
+    <button class="cat-btn" data-category="science" role="tab" aria-selected="false">🔬 Science</button>
+</div>
+
+<div class="container">
+    <div class="toolbar">
+        <div class="toolbar-info">
+            <span id="articleCount">0 articles</span> • 
+            <span id="cacheStatus">Fresh data</span>
+        </div>
+        <button class="view-saved-btn" onclick="viewSavedArticles()">⭐ Saved Articles (<span id="savedCount">0</span>)</button>
+    </div>
+    <div id="newsContainer" class="news-grid">
+        <div class="loading">📰 Fetching latest news from around the world...</div>
+    </div>
+    <div class="button-group">
+        <button class="refresh-btn" onclick="fetchNews()" aria-label="Refresh news">🔄 Refresh News Now</button>
+    </div>
+</div>
+
+<!-- Saved Articles Modal -->
+<div id="savedModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>⭐ Saved Articles</h2>
+            <button class="close-btn" onclick="closeSavedModal()" aria-label="Close saved articles">✕</button>
+        </div>
+        <div id="savedArticlesContainer" class="saved-articles-list">
+            <div class="saved-empty">No saved articles yet. Click the star icon on any article to save it.</div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    News updates every 5 minutes • Sources: BBC, Reuters, NY Times, Al Jazeera, The Guardian, Wired, WHO, Nature, New Scientist and more via RSS feeds
+</footer>
+
+<script>
+    // Configuration
+    const CONFIG = {
+        CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+        FETCH_TIMEOUT: 10000, // 10 seconds per feed
+        MAX_ARTICLES_PER_FEED: 20,
+        STORAGE_KEY_PREFIX: 'news_app_'
+    };
+
+    // Improved RSS feed URLs with fallbacks
+    const feedSources = {
+        general: [
+            'https://feeds.bbci.co.uk/news/rss.xml',
+            'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
+            'https://www.theguardian.com/world/rss',
+            'https://feeds.reuters.com/world'
+        ],
+        world: [
+            'https://feeds.bbci.co.uk/news/world/rss.xml',
+            'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
+            'https://www.aljazeera.com/xml/rss/all.xml',
+            'https://feeds.reuters.com/world'
+        ],
+        technology: [
+            'https://feeds.bbci.co.uk/news/technology/rss.xml',
+            'https://www.wired.com/feed/rss.xml',
+            'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml',
+            'https://feeds.techcrunch.com/'
+        ],
+        business: [
+            'https://feeds.bbci.co.uk/news/business/rss.xml',
+            'https://feeds.bloomberg.com/markets/news.rss',
+            'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',
+            'https://feeds.reuters.com/business'
+        ],
+        health: [
+            'https://feeds.bbci.co.uk/news/health/rss.xml',
+            'https://www.who.int/rss-feeds/news-english.xml',
+            'https://www.medicalnewstoday.com/feed',
+            'https://feeds.healthline.com/'
+        ],
+        science: [
+            'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml',
+            'https://www.newscientist.com/feed/',
+            'https://www.nature.com/nature.rss',
+            'https://feeds.sciencedaily.com/'
+        ]
+    };
+
+    let currentCategory = 'general';
+    let autoRefreshInterval;
+    let articleCache = {};
+    let cacheTimestamp = {};
+
+    // Fetch with timeout
+    async function fetchWithTimeout(url, timeout = CONFIG.FETCH_TIMEOUT) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        try {
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            return response;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            throw error;
+        }
+    }
+
+    // Improved RSS feed fetching with better error handling
+    async function fetchRSSFeed(url) {
+        const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=${CONFIG.MAX_ARTICLES_PER_FEED}`;
+        try {
+            const response = await fetchWithTimeout(proxyUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const data = await response.json();
+            if (data.status === 'ok' && data.items) {
+                return data.items;
+            }
+            return [];
+        } catch (error) {
+            console.warn(`Feed error (${url}):`, error.message);
+            return [];
+        }
+    }
+
+    // Extract source name from URL
+    function extractSourceName(url) {
+        try {
+            let sourceName = new URL(url).hostname.replace('www.', '').split('.')[0];
+            sourceName = sourceName.charAt(0).toUpperCase() + sourceName.slice(1);
+            return sourceName;
+        } catch {
+            return 'News';
+        }
+    }
+
+    // Fetch all news with parallel requests
+    async function fetchAllNews(category) {
+        const sources = feedSources[category] || feedSources.general;
+        
+        try {
+            // Fetch all feeds in parallel
+            const feedPromises = sources.map(source => 
+                fetchRSSFeed(source).then(articles => ({
+                    source,
+                    articles
+                }))
+            );
+
+            const results = await Promise.all(feedPromises);
+            let allArticles = [];
+
+            // Process results
+            for (const { source, articles } of results) {
+                const sourceName = extractSourceName(source);
+                for (const article of articles) {
+                    allArticles.push({
+                        title: article.title || 'No title',
+                        description: article.description ? 
+                            article.description.replace(/<[^>]*>/g, '').substring(0, 200) : 
+                            'Read more...',
+                        link: article.link || '#',
+                        pubDate: article.pubDate || new Date().toISOString(),
+                        source: sourceName,
+                        image: article.enclosure && article.enclosure.link ? article.enclosure.link : null,
+                        guid: article.guid || article.link || article.title
+                    });
+                }
+            }
+
+            // Remove duplicates by title (case-insensitive)
+            const unique = [];
+            const titles = new Set();
+            for (const article of allArticles) {
+                const lowerTitle = article.title.toLowerCase();
+                if (!titles.has(lowerTitle)) {
+                    titles.add(lowerTitle);
+                    unique.push(article);
+                }
+            }
+
+            // Sort by date (newest first)
+            unique.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+            
+            return unique;
+        } catch (error) {
+            console.error('Error fetching all news:', error);
+            throw error;
+        }
+    }
+
+    // Cache management
+    function getFromCache(category) {
+        const cacheKey = `${CONFIG.STORAGE_KEY_PREFIX}${category}`;
+        const cached = localStorage.getItem(cacheKey);
+        const timestamp = cacheTimestamp[category] || 0;
+        const now = Date.now();
+
+        if (cached && (now - timestamp) < CONFIG.CACHE_DURATION) {
+            return JSON.parse(cached);
+        }
+        return null;
+    }
+
+    function saveToCache(category, articles) {
+        const cacheKey = `${CONFIG.STORAGE_KEY_PREFIX}${category}`;
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(articles));
+            cacheTimestamp[category] = Date.now();
+        } catch (error) {
+            console.warn('Cache storage full:', error);
+        }
+    }
+
+    // Format relative time
+    function timeAgo(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        
+        if (seconds < 60) return 'just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+    }
+
+    // Saved articles management
+    function toggleSaveArticle(article) {
+        const saved = getSavedArticles();
+        const index = saved.findIndex(a => a.guid === article.guid);
+        
+        if (index > -1) {
+            saved.splice(index, 1);
+        } else {
+            saved.push(article);
+        }
+        
+        saveSavedArticles(saved);
+        updateSavedCount();
+        refreshDisplayedCards();
+    }
+
+    function getSavedArticles() {
+        const saved = localStorage.getItem(`${CONFIG.STORAGE_KEY_PREFIX}saved`);
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    function saveSavedArticles(articles) {
+        try {
+            localStorage.setItem(`${CONFIG.STORAGE_KEY_PREFIX}saved`, JSON.stringify(articles));
+        } catch (error) {
+            console.warn('Could not save articles:', error);
+        }
+    }
+
+    function updateSavedCount() {
+        const count = getSavedArticles().length;
+        document.getElementById('savedCount').textContent = count;
+    }
+
+    function isSaved(article) {
+        return getSavedArticles().some(a => a.guid === article.guid);
+    }
+
+    // Display news in grid
+    function displayNews(articles) {
+        const container = document.getElementById('newsContainer');
+        const saved = getSavedArticles();
+        
+        if (!articles || articles.length === 0) {
+            container.innerHTML = '<div class="no-news">📭 No news available at the moment. Please try refreshing or switching categories.</div>';
+            document.getElementById('articleCount').textContent = '0 articles';
+            return;
+        }
+
+        container.innerHTML = articles.map(article => {
+            const isSavedArticle = isSaved(article);
+            return `
+            <article class="news-card" tabindex="0">
+                <div class="card-img">
+                    ${article.image ? 
+                        `<img src="${article.image}" alt="${article.title}" loading="lazy" onerror="this.style.display='none'; this.parentElement.textContent='📰'">` : 
+                        '📰'
+                    }
+                </div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <div class="source">${escapeHtml(article.source)}</div>
+                        <button class="save-btn ${isSavedArticle ? 'saved' : ''}" 
+                                onclick="event.stopPropagation(); toggleSaveArticle(${JSON.stringify(article).replace(/"/g, '&quot;')}); updateSavedCount();"
+                                aria-label="${isSavedArticle ? 'Remove from saved' : 'Save article'}">
+                            ${isSavedArticle ? '⭐' : '☆'}
+                        </button>
+                    </div>
+                    <h3 class="title">${escapeHtml(article.title)}</h3>
+                    <p class="description">${escapeHtml(article.description)}</p>
+                    <div class="pub-date">🕐 ${timeAgo(article.pubDate)}</div>
+                </div>
+            </article>
+        `;
+        }).join('');
+
+        // Add click handlers for keyboard and mouse
+        document.querySelectorAll('.news-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const article = articles[Array.from(document.querySelectorAll('.news-card')).indexOf(this)];
+                if (article && article.link !== '#') {
+                    window.open(article.link, '_blank');
+                }
+            });
+            card.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const article = articles[Array.from(document.querySelectorAll('.news-card')).indexOf(this)];
+                    if (article && article.link !== '#') {
+                        window.open(article.link, '_blank');
+                    }
+                }
+            });
+        });
+
+        document.getElementById('articleCount').textContent = `${articles.length} articles`;
+        updateTimestamp();
+    }
+
+    function refreshDisplayedCards() {
+        const cards = document.querySelectorAll('.save-btn');
+        const saved = getSavedArticles();
+        cards.forEach(btn => {
+            const card = btn.closest('.news-card');
+            const title = card.querySelector('.title').textContent;
+            const isSavedArticle = saved.some(a => a.title === title);
+            btn.textContent = isSavedArticle ? '⭐' : '☆';
+            btn.classList.toggle('saved', isSavedArticle);
+        });
+    }
+
+    // View saved articles
+    function viewSavedArticles() {
+        const saved = getSavedArticles();
+        const container = document.getElementById('savedArticlesContainer');
+        
+        if (saved.length === 0) {
+            container.innerHTML = '<div class="saved-empty">No saved articles yet. Click the star icon on any article to save it.</div>';
+        } else {
+            container.innerHTML = saved.map(article => `
+                <article class="news-card" tabindex="0">
+                    <div class="card-img">
+                        ${article.image ? 
+                            `<img src="${article.image}" alt="${article.title}" loading="lazy" onerror="this.style.display='none'; this.parentElement.textContent='📰'">` : 
+                            '📰'
+                        }
+                    </div>
+                    <div class="card-content">
+                        <div class="card-header">
+                            <div class="source">${escapeHtml(article.source)}</div>
+                            <button class="save-btn saved" 
+                                    onclick="event.stopPropagation(); toggleSaveArticle(${JSON.stringify(article).replace(/"/g, '&quot;')}); viewSavedArticles();"
+                                    aria-label="Remove from saved">
+                                ⭐
+                            </button>
+                        </div>
+                        <h3 class="title">${escapeHtml(article.title)}</h3>
+                        <p class="description">${escapeHtml(article.description)}</p>
+                        <div class="pub-date">🕐 ${timeAgo(article.pubDate)}</div>
+                    </div>
+                </article>
+            `).join('');
+
+            document.querySelectorAll('#savedArticlesContainer .news-card').forEach((card, index) => {
+                card.addEventListener('click', function() {
+                    const article = saved[index];
+                    if (article && article.link !== '#') {
+                        window.open(article.link, '_blank');
+                    }
+                });
+                card.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        const article = saved[index];
+                        if (article && article.link !== '#') {
+                            window.open(article.link, '_blank');
+                        }
+                    }
+                });
+            });
+        }
+        
+        document.getElementById('savedModal').classList.add('open');
+    }
+
+    function closeSavedModal() {
+        document.getElementById('savedModal').classList.remove('open');
+    }
+
+    // Close modal on outside click
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('savedModal');
+        if (event.target === modal) {
+            closeSavedModal();
+        }
+    });
+
+    // XSS protection
+    function escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // Show loading state
+    function showLoading() {
+        document.getElementById('newsContainer').innerHTML = '<div class="loading">🌍 Fetching latest headlines from around the world...</div>';
+    }
+
+    // Show error state
+    function showError(message, details = '') {
+        const container = document.getElementById('newsContainer');
+        container.innerHTML = `
+            <div class="error">
+                ⚠️ ${escapeHtml(message)}
+                ${details ? `<div class="error-details">${escapeHtml(details)}</div>` : ''}
+                <div class="button-group">
+                    <button class="retry-btn" onclick="fetchNews()">🔄 Retry</button>
+                </div>
+            </div>
+        `;
+    }
+
+    // Update timestamp
+    function updateTimestamp() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        const cacheStatus = localStorage.getItem(`${CONFIG.STORAGE_KEY_PREFIX}${currentCategory}`) ? 'From cache' : 'Fresh data';
+        document.getElementById('updateInfo').innerHTML = `📡 Last updated: ${timeStr} • ${cacheStatus}`;
+        document.getElementById('cacheStatus').textContent = cacheStatus;
+    }
+
+    // Main fetch function
+    async function fetchNews() {
+        showLoading();
+        const refreshBtn = document.querySelector('.refresh-btn');
+        refreshBtn.classList.add('loading');
+        refreshBtn.disabled = true;
+
+        try {
+            // Try to get from cache first
+            let articles = getFromCache(currentCategory);
+            
+            if (!articles) {
+                // No cache, fetch fresh data
+                articles = await fetchAllNews(currentCategory);
+                if (articles.length > 0) {
+                    saveToCache(currentCategory, articles);
+                }
+            }
+
+            if (articles.length === 0) {
+                showError(
+                    'Unable to load news from this category',
+                    'All news sources are currently unavailable. Please try a different category or check your internet connection.'
+                );
+            } else {
+                displayNews(articles);
+            }
+        } catch (error) {
+            console.error('Error fetching news:', error);
+            
+            // Try to fall back to cached data
+            const cached = localStorage.getItem(`${CONFIG.STORAGE_KEY_PREFIX}${currentCategory}`);
+            if (cached) {
+                displayNews(JSON.parse(cached));
+                showError(
+                    'Using cached data',
+                    'Fresh news could not be loaded, but showing previously cached articles instead.'
+                );
+            } else {
+                showError(
+                    'Unable to load news',
+                    'Please check your internet connection and try again.'
+                );
+            }
+        } finally {
+            refreshBtn.classList.remove('loading');
+            refreshBtn.disabled = false;
+        }
+    }
+
+    // Change category
+    function changeCategory(category) {
+        currentCategory = category;
+        
+        // Update active button styling
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            const isActive = btn.dataset.category === category;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive);
+        });
+        
+        fetchNews();
+    }
+
+    // Setup event listeners
+    function setupCategoryListeners() {
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                changeCategory(btn.dataset.category);
+            });
+            btn.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    changeCategory(btn.dataset.category);
+                }
+            });
+        });
+    }
+
+    // Auto-refresh with better error handling
+    function startAutoRefresh() {
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+        autoRefreshInterval = setInterval(() => {
+            fetchNews();
+        }, 5 * 60 * 1000); // 5 minutes
+    }
+
+    // Initialize
+    function init() {
+        setupCategoryListeners();
+        updateSavedCount();
+        fetchNews();
+        startAutoRefresh();
+    }
+
+    // Start the app
+    init();
+</script>
+</body>
+</html>
